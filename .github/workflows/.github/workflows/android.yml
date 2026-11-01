@@ -1,0 +1,43 @@
+name: Build Web2APK Android
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'web2apk-converter-corrected.zip'
+      - '.github/workflows/android.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Install Gradle
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '9.3.1'
+
+      - name: Extract Android project
+        run: |
+          mkdir source
+          unzip -q web2apk-converter-corrected.zip -d source
+          PROJECT_DIR=$(find source -name settings.gradle.kts -printf '%h\n' | head -n 1)
+          echo "PROJECT_DIR=$PROJECT_DIR" >> $GITHUB_ENV
+
+      - name: Build APK
+        run: gradle --no-daemon -p "$PROJECT_DIR" assembleDebug
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: Web2APK-Debug-APK
+          path: source/**/app/build/outputs/apk/debug/*.apk
